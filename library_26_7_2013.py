@@ -731,11 +731,18 @@ def pca(path,folder):
     - folder: input file folder
     
     Output:
+<<<<<<< HEAD
     - mean: mean of all the bands
     - first_mode: first order component
     - second_mode: second order component
     - third_mode: third order component
     - new_indicator: urban development indicator
+=======
+    - immean: mean of all the bands
+    - mode: first order component
+    - sec_order: second order component
+    - third_order: third order component
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
     ###################################################################################################################
     '''
 
@@ -788,6 +795,7 @@ def pca(path,folder):
         U,S,V = np.linalg.svd(immatrix)
         V = V[:num_data] #only makes sense to return the first num_data    
 
+<<<<<<< HEAD
     mean = img_mean.reshape(rows,cols)
     first_mode = V[0].reshape(rows,cols)
     second_mode = V[1].reshape(rows,cols)
@@ -797,6 +805,17 @@ def pca(path,folder):
     
     
     return mean,first_mode,second_mode,third_mode, new_indicator
+=======
+    immean = img_mean.reshape(rows,cols)
+    mode = V[0].reshape(rows,cols)
+    sec_order = V[1].reshape(rows,cols)
+    third_order = V[2].reshape(rows,cols)       
+    new_indicator = ((4*mode)+immean)    /(immean + mode+sec_order+third_order+0.0001)
+    
+    
+    
+    return immean,mode,sec_order,third_order, new_indicator
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
 
 
 def WriteOutputImage(projection_reference,path,folder,output_name,cols,rows,type,nbands,array_list):
