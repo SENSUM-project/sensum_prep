@@ -27,8 +27,13 @@ import numpy as np
 from library_26_7_2013 import clip,shift_comp,urban_development_landsat,classification,WriteOutputImage,pca
 
 starttime=time.time()
+<<<<<<< HEAD
 sat_folder = '/Users/daniele/Documents/Sensum/Izmir/Landsat5_2/'   ##path of the folder containing satellite images
 shapefile = '/Users/daniele/Documents/Sensum/Izmir/sensum_tk_utm.shp' #path of the shapefile
+=======
+sat_folder = 'C:\\Users\\mostapha\\Documents\\Sensum\\Izmir00\\Landsat55\\'   ##path of the folder containing satellite images
+shapefile = 'C:\\Users\\mostapha\\Documents\\Sensum\\Izmir00\\myIzmir.shp' #path of the shapefile
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
 os.chdir(sat_folder)
 dirs = os.listdir(sat_folder) #list of folders inside the satellite folder
 print 'List of files and folders: ' + str(dirs)
@@ -132,7 +137,11 @@ for i in range(0,len(year_list)):
         
         #urban area extraction
         starttime_classification = time.time()
+<<<<<<< HEAD
         classification(sat_folder,directory[0],5,'Turkey','Izmir',4,5) #unsupervised classification for urban area extraction  ### but is it going to use the full set of images in that folder, (city,adj city and the full image)
+=======
+        classification(sat_folder,directory[0],7,'Turkey','Izmir',5,7) #unsupervised classification for urban area extraction  ### but is it going to use the full set of images in that folder, (city,adj city and the full image)
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
         endtime_classification = time.time()
         time_classification = endtime_classification - starttime_classification
         time_classification_avg = time_classification_avg + time_classification
@@ -150,7 +159,11 @@ for i in range(0,len(year_list)):
         print '--- Urban development - Total time= ' + str(time_urbandev) + '\n'
         
         starttime_pca=time.time()
+<<<<<<< HEAD
         mean,first_mode,second_mode,third_mode, new_indicator = pca(sat_folder,directory[0]+separator) #pca for urban area extraction#### big mistake it will consider lots of unrelated files
+=======
+        immean,mode,sec_order,third_order, new_indicator = pca(sat_folder,directory[0]+separator) #pca for urban area extraction#### big mistake it will consider lots of unrelated files
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
         endtime_pca = time.time()
         time_pca = endtime_pca - starttime_pca
         time_pca_avg = time_pca_avg + time_pca
@@ -173,7 +186,11 @@ for i in range(0,len(year_list)):
         mask_BANDS_list.append( mask_BANDS)    
     
         #new_indicator = ((4*mode)+immean)     /(immean + mode+sec_order+third_order+0.0001)### isolate the built-up and the water
+<<<<<<< HEAD
         mask_2 = np.less(  second_mode- mean  ,0)        ### watermask
+=======
+        mask_2 = np.less(  sec_order- immean  ,0)        ### watermask
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
         mask01_2 = np.choose(mask_2, (0,1))
 
         mask_22 = np.less(  new_indicator   ,2.45)
@@ -194,7 +211,11 @@ time_total = endtime-starttime
 print '-----------------------------------------------------------------------------------------'
 print 'Total time= ' + str(time_total)
 print 'Average time year= ' + str(time_year_avg/len(year_list))
+<<<<<<< HEAD
 print 'Average shift compensation= ' + str(time_shift_avg/len(year_list)-1)
+=======
+print 'Average shift compensation= ' + str(time_shift_avg/len(year_list))
+>>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
 print 'Average urban development= ' + str(time_urbandev_avg/len(year_list))
 print 'Average pca= ' + str(time_pca_avg/len(year_list))
 print 'Average classification= ' + str(time_classification_avg/len(year_list))
