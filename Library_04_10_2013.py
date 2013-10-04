@@ -16,8 +16,9 @@ mostapha.harb@eucentre.it
 
 import os, sys
 import string
-import osgeo.gdal
+import osgeo.gdal,gdal
 from osgeo.gdalconst import *
+from gdalconst import *
 import cv2
 from cv2 import cv
 import scipy as sp
@@ -28,6 +29,8 @@ import osgeo.ogr
 from collections import defaultdict
 import grass.script.setup as gsetup
 import grass.script as grass
+from skimage.segmentation import felzenszwalb, slic, quickshift
+
 
 if os.name == 'posix':
     separator = '/'
@@ -525,8 +528,8 @@ def classification(path,folder,n_class,location,mapset,min_class,max_class):
     #GRASS details, mapset has to be created before
     if os.name == 'posix':
         #GRASS details, mapset has to be created before
-        gisbase = '/Applications/GRASS-6.4.app/Contents/MacOS'
-        gisdbase = '/Users/daniele/Documents/Test'
+        gisbase = 'C:\Program Files (x86)\GRASS GIS 6.4.3RC2'
+        gisdbase = 'C:\grassdata'
     else:
         gisbase = 'C:\Program Files (x86)\GRASS GIS 6.4.3RC2'
         gisdbase = 'C:\grassdata'
@@ -731,18 +734,10 @@ def pca(path,folder):
     - folder: input file folder
     
     Output:
-<<<<<<< HEAD
-    - mean: mean of all the bands
-    - first_mode: first order component
-    - second_mode: second order component
-    - third_mode: third order component
-    - new_indicator: urban development indicator
-=======
     - immean: mean of all the bands
     - mode: first order component
     - sec_order: second order component
     - third_order: third order component
->>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
     ###################################################################################################################
     '''
 
@@ -771,7 +766,8 @@ def pca(path,folder):
         #print i,data
         bandList.append(data)
         
-    #expand the list
+    #expand the listclass
+    
     immatrix = np.array([np.array(bandList[i]).flatten() for i in range(1,7)],'f')
  
     #get dimensions
@@ -795,17 +791,6 @@ def pca(path,folder):
         U,S,V = np.linalg.svd(immatrix)
         V = V[:num_data] #only makes sense to return the first num_data    
 
-<<<<<<< HEAD
-    mean = img_mean.reshape(rows,cols)
-    first_mode = V[0].reshape(rows,cols)
-    second_mode = V[1].reshape(rows,cols)
-    third_mode = V[2].reshape(rows,cols)       
-    new_indicator = ((4*first_mode)+mean)    /(mean + first_mode+second_mode+third_mode+0.0001)
-    
-    
-    
-    return mean,first_mode,second_mode,third_mode, new_indicator
-=======
     immean = img_mean.reshape(rows,cols)
     mode = V[0].reshape(rows,cols)
     sec_order = V[1].reshape(rows,cols)
@@ -815,7 +800,6 @@ def pca(path,folder):
     
     
     return immean,mode,sec_order,third_order, new_indicator
->>>>>>> 2cbff2a2a3236a4c28fc120528e30d9de00290f1
 
 
 def WriteOutputImage(projection_reference,path,folder,output_name,cols,rows,type,nbands,array_list):
@@ -844,6 +828,8 @@ def WriteOutputImage(projection_reference,path,folder,output_name,cols,rows,type
     # array_list is a list containing all the data matrixes; a list is used because could be more than one matrix (more than one band)
     # if cols and rows are not provided, the algorithm uses values from the reference image
     # nbands contains the number of bands in the output image
+    #print ('len(array_list[0]',len(array_list[0]))
+    
     if type == 0:
         type = GDT_Float32
     inb = osgeo.gdal.Open(path+folder+projection_reference, GA_ReadOnly)
@@ -851,16 +837,445 @@ def WriteOutputImage(projection_reference,path,folder,output_name,cols,rows,type
     if rows == 0 or cols == 0:
         rows = inb.RasterYSize
         cols = inb.RasterXSize
-    
+    print rows,cols
     outDs = driver.Create(path+folder+output_name, cols, rows,nbands, type)
     if outDs is None:
         print 'Could not create ' + output_name
         sys.exit(1)
     for i in range(nbands): 
         outBand = outDs.GetRasterBand(i+1)
+        
         outmatrix = array_list[i].reshape(rows,cols)
         outBand.WriteArray(outmatrix, 0, 0)
         
     # georeference the image and set the projection
     outDs.SetGeoTransform(inb.GetGeoTransform())
     outDs.SetProjection(inb.GetProjection())
+
+  
+def SLIC( Input_Image,ratio, n_segments, sigma):
+    '''
+    Description:    Segments image using k-means clustering in Color space.
+
+    source:         skimage, openCv python 
+    
+    parameters:     Input_Image : ndarray
+                    Input image, which can be 2D or 3D, and grayscale or multi-channel (see multichannel parameter).
+    
+                    n_segments : int
+                    The (approximate) number of labels in the segmented output image.
+    
+                    ratio:  float
+                    Balances color-space proximity and image-space proximity. Higher values give more weight to color-space and yields more square regions
+    
+                    sigma : float
+                    Width of Gaussian smoothing kernel for preprocessing. Zero means no smoothing.
+    
+    return:         Output_mask : ndarray
+                    Integer mask indicating segment labels.
+        
+    '''
+    if ratio == 0:
+        ratio = 0.5
+    if n_segments == 0:
+        n_segments = 3
+    if sigma ==0:
+        sigma = 1
+
+    img = cv2.imread(Input_Image)
+    segments_slic = slic(img, ratio=0.5, n_segments=3, sigma=1)
+    print("Slic number of segments: %d" % len(np.unique(segments_slic)))
+    return segments_slic
+
+
+def FELZENSZWALB(Input_Image, scale, sigma, min_size):
+   
+    '''
+    Description:   Computes Felsenszwalbs efficient graph based image segmentation. 
+
+    source:         skimage, openCv python 
+    
+    parameters:     Input_Image : ndarray
+                    Input image
+    
+                    min-size : int
+                    Minimum component size. Enforced using postprocessing.
+    
+                    scale:  float
+                     The parameter scale sets an observation level. Higher scale means less and larger segments.
+    
+                    sigma : float
+                    Width of Gaussian smoothing kernel for preprocessing. Zero means no smoothing.
+    
+    return:         Segment_mask : ndarray
+                    Integer mask indicating segment labels.
+        
+    '''
+    #default values, set in case of 0 as input
+    if scale == 0:
+        scale = 5
+    if sigma == 0:
+        sigma = 0.5
+    if min_size == 0:
+        min_size = 30
+
+    #print Input
+    img = cv2.imread(Input_Image)
+    #print img
+    #print img.shape
+
+    segments_fz = felzenszwalb(img, scale, sigma, min_size)
+    print segments_fz.shape
+    #print ('segments_fz datatype',segments_fz.dtype )
+    print("Felzenszwalb's number of segments: %d" % len(np.unique(segments_fz)))
+    print ('segments_fz datatype',segments_fz.dtype )
+
+    return segments_fz
+
+
+
+def QUICKSHIFT(Input_Image,ks, md, r):
+        
+    '''
+    Description:    Segments image using quickshift clustering in Color space.
+
+    source:         skimage, openCv python 
+    
+    parameters:     Input_Image : ndarray
+                    Input image
+    
+                    kernel size : float
+                    Width of Gaussian kernel used in smoothing the sample density. Higher means fewer clusters.
+    
+                    max distance:  float
+                    Cut-off point for data distances. Higher means fewer clusters.
+    
+                    ratio : float, between 0 and 1 
+                    Balances color-space proximity and image-space proximity. Higher values give more weight to color-space.
+    
+    return:         Segment_mask : ndarray (cols, rows)
+                    Integer mask indicating segment labels.
+    '''
+    #default values, set in case of 0 as input
+    if ks == 0:
+        ks = 5
+    if md == 0:
+        md = 10
+    if r == 0:
+        r = 1
+    # print kernel_size,max_dist, ratio    
+    img = cv2.imread(Input_Image)
+    segments_quick = quickshift(img, kernel_size=ks, max_dist=md, ratio=r)
+    #print segments_quick.shape
+    print("Quickshift number of segments: %d" % len(np.unique(segments_quick)))
+    return segments_quick
+
+
+def WATERSHED(Input_Image):
+    '''
+    Description:    Computes watershed segmentation,based on mathematical morphology and flooding of regions from markers.
+
+    source:         openCV 
+    
+    parameters:     Input_Image : ndarray
+                    Input image
+    
+                   marker: float
+                
+    return:         Segment_mask : ndarray (cols, rows)
+                    Integer mask indicating segment labels.
+    '''   
+    # read the input image
+    img = cv2.imread(Input_Image)
+    
+    # convert to grayscale
+    g1 = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+    # smooth the image 
+    g = cv2.medianBlur(g1,5)
+
+    # Apply adaptive threshold
+    thresh1 = cv2.adaptiveThreshold(g,255,1,1,11,2)
+    thresh_color = cv2.cvtColor(thresh1,cv2.COLOR_GRAY2BGR)
+
+    # Apply  dilation and erosion 
+    bgt = cv2.dilate(thresh1,None,iterations = 3)
+    fg = cv2.erode(bgt,None,iterations = 2)
+    
+    #thresholding on the background
+    ret,bg = cv2.threshold(bgt,1,128,1)
+    
+    #adding results
+    marker = cv2.add(fg,bg)
+    
+    #moving markers to 32 bit signed single channel
+    marker32 = np.int32(marker)
+    
+    #segmenting
+    cv2.watershed(img,marker32)
+    m = cv2.convertScaleAbs(marker32)
+
+    ret,thresh = cv2.threshold(m,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    res = cv2.bitwise_and(img,img,mask = thresh)
+    segments_watershed = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+    print("watershed number of segments: %d" % len(np.unique(segments_watershed)))
+    segments_watershed = segments_watershed.astype(np.int32)
+    #print ('segments_watershed datatype',segments_watershed.dtype )
+    return segments_watershed
+
+
+def Pixel2world(gt, cols, rows ):
+    '''
+    Description: Uses a gdal geomatrix  to calculate  the geospatial coordinates of top-left and down-right pixel  
+    '''
+    
+    minx = gt[0]
+    miny = gt[3] + cols*gt[4] + rows*gt[5] 
+    maxx = gt[0] + cols*gt[1] + rows*gt[2]
+    maxy = gt[3] 
+    
+    
+    return (maxx,miny)
+
+def BAATZ(Input,Folder,exe,euc_threshold,compactness,baatz_color,scale):#,input_bands,input_weights,output folder,reliability):
+    '''
+    ###################################################################################################################
+    
+    Description:               performs a segmentation based on Baatz where each generated segment represents an hypothesis to be analyzed by the next semantic network node.
+    
+    Source:                    InterIMAGE 1.34, open source, the code is written in C++ 
+                               http://interimage.sourceforge.net/
+    
+    parameters:    
+              - Input_Image: 
+                              The image to which the segmentation will be applied 
+    
+              - Folder: 
+                              temporal folder, for working on the direct products of the segmentor   
+              
+              -exe_path: 
+                              path to the attached excutive file 
+              
+              -euc_threshold: float, positive
+                              The minimum Euclidean Distance between each segment feature.    
+                                            
+              -compactness:   float, between 0 and one 
+                              Baatz Compactness Weight attribute 
+              
+              -baatz_color:   float, between 0 and one
+                              Baatz Color Weight attribute 
+                              
+              -scale:         float, positive
+                              Baatz scale attribute.
+              
+              -input_bands:   String, a comma-separated list of used input images channels/bands (starting from 0)   
+                              in this case we considered only the pancromatic band
+              
+              -input_weights: String, a comma-separated list of used input channels/bands weights.    
+                              in this case we considered only one pancromatic band 
+              
+              -output folder: 
+                              the folder containg the created segment_mask  ndarray (cols, rows)
+              
+              -reliability:   float, between 0 and one
+                              The reliability (higher priority will be given to nodes with higher weights in cases where there are geographic overlays).
+    
+    return:   -Segment_mask : ndarray (cols, rows)
+                              Integer mask indicating segment labels.
+    ###################################################################################################################
+    '''
+    #default values, set in case of 0 as input
+    if euc_threshold == 0:
+        euc_threshold = 50
+    if compactness  == 0:
+        compactness = 0.5
+    if baatz_color  == 0:
+        baatz_color = 0.5
+    if scale  == 0:
+        scale = 80
+        
+    # open the input file 
+    ds = gdal.Open(Input, GA_ReadOnly)
+    if ds is None:
+        print 'Could not open image'
+        sys.exit(1)
+        
+    # get image size
+    rows = ds.RasterYSize
+    #print rows
+    cols = ds.RasterXSize
+    #print cols  
+    
+    
+    
+    #get the coordinates the top left and down right pixels
+    gt = ds.GetGeoTransform()
+    print gt[0], gt[3]  
+    GW=gt[0]
+    GN=gt[3]
+    a= Pixel2world(gt, cols,rows)
+    #print a[0], a[1]
+    GE= a[0]
+    GS= a[1]
+    
+    output_file = Folder + '\\'+'baatz'
+    
+    #removing the file created by the segmenter after each run
+    Folder_files = os.listdir(Folder)
+    file_ = [s for s in Folder_files if "ta_segmenter" in s]
+    if file_:
+        os.remove(Folder+'\\'+file_[0])
+    exe_file =  exe +'\\'+ 'ta_baatz_segmenter.exe'   
+    
+    #runs the baatz segmenter
+    os.system(exe_file + ' "'+Input+'" "'+str(GW)+'" "'+str(GN)+'" "'+str(GE)+'" "'+str(GS)+'" "" "'+Folder+'" "" Baatz "'+str(euc_threshold)+'" "@area_min@" "'+str(compactness)+'" "'+str(baatz_color)+'" "'+str(scale)+'" "0" "1" "'+output_file+'" "seg" "0.2" "" "" "no"')
+
+    #removing the raw file if existed
+    if os.path.exists(output_file + '.raw'):
+        os.remove(output_file +'.raw')
+       
+    os.chdir(Folder)
+    
+    
+    
+    #changing plm to raw
+    output = output_file +'.plm'
+    os.rename(output, output_file + ".raw")
+    new_image = output_file + ".raw"
+    
+    
+    #removing the header lines from the raw file
+    with open(new_image, 'r+b') as f:
+        lines = f.readlines()
+    #print len(lines)
+    
+    lines[:] = lines[4:]
+    with open(new_image, 'w+b') as f:
+        f.write(''.join(lines))
+    #print len(lines)
+    f.close()
+
+    ##memory mapping
+    segments_baatz = np.memmap( new_image, dtype=np.int32, shape=(rows, cols))#uint8, float64, int32, int16, int64
+    print("output_baatz's number of segments: %d" % len(np.unique(segments_baatz)))
+    
+    return segments_baatz
+
+def REGION_GROWING(Input,Folder,exe,euc_threshold,compactness,baatz_color,scale):#,input_bands,input_weights,output folder,reliability)
+    '''
+    ###################################################################################################################
+    Description:               performs a segmentation based on region growing based segmentation, where each generated segment represents an hypothesis to be analyzed by the next semantic network node.
+    
+    Source:                    InterIMAGE 1.34, open source, the code is written in C++ 
+                               http://interimage.sourceforge.net/
+    parameters:    
+              - Input_Image: 
+                              The image to which the segmentation will be applied 
+    
+              - Folder: 
+                              temporal folder, for working on the direct products of the segmentor   
+              
+              -exe_path: 
+                              path to the attached excutive file 
+              
+              -euc_threshold: float, positive
+                              The minimum Euclidean Distance between each segment feature.    
+                                            
+              -compactness:   float, between 0 and one 
+                              Region Growing Compactness Weight attribute 
+              
+              -baatz_color:   float, between 0 and one
+                              Region Growing Color Weight attribute 
+                              
+              -scale:         float, positive
+                              Region Growing scale attribute.
+              
+              -input_bands:   String, a comma-separated list of used input images channels/bands (starting from 0)   
+                              in this case we considered only the pancromatic band
+              
+              -input_weights: String, a comma-separated list of used input channels/bands weights.    
+                              in this case we considered only one pancromatic band 
+              
+              -output folder: 
+                              the folder containg the created segment_mask  ndarray (cols, rows)
+              
+              -reliability:   float, between 0 and one
+                              The reliability (higher priority will be given to nodes with higher weights in cases where there are geographic overlays).
+    
+    return:   -Segment_mask : ndarray (cols, rows)
+                              Integer mask indicating segment labels.
+    ###################################################################################################################
+    '''
+    #default values, set in case of 0 as input
+    if euc_threshold == 0:
+        euc_threshold = 80
+    if compactness  == 0:
+        compactness = 0.5
+    if baatz_color  == 0:
+        baatz_color = 0.5
+    if scale  == 0:
+        scale = 80
+    # open the input file 
+    ds = gdal.Open(Input, GA_ReadOnly)
+    if ds is None:
+        print 'Could not open image'
+        sys.exit(1)
+        
+    # get image size
+    rows = ds.RasterYSize
+    cols = ds.RasterXSize
+     
+    #get the coordinates the top left and down right pixels
+    gt = ds.GetGeoTransform()
+    print gt[0], gt[3]  
+    GW=gt[0]
+    GN=gt[3]
+    a= Pixel2world(gt, cols,rows)
+    print a[0], a[1]
+    GE= a[0]
+    GS= a[1]
+    output_file = Folder + '\\'+'regiongrowing'
+    
+    #removing the changing name file created by the segmenter after each run
+    Folder_files = os.listdir(Folder)
+    file_ = [s for s in Folder_files if "ta_segmenter" in s]
+    if file_:
+        os.remove(Folder+'\\'+file_[0])
+    exe_file =  exe +'\\'+ 'ta_regiongrowing_segmenter.exe'   
+    
+    
+    #runs the regiongrowing segmenter
+    os.system(exe_file + ' "'+Input+'" "'+str(GW)+'" "'+str(GN)+'" "'+str(GE)+'" "'+str(GS)+'" "" "'+Folder+'" "" RegionGrowing "'+str(euc_threshold)+'" "@area_min@" "'+str(compactness)+'" "'+str(baatz_color)+'" "'+str(scale)+'" "0" "1" "'+output_file+'" "seg" "0.2" "" "" "no"')
+
+    #removing the raw file if existed
+    if os.path.exists(output_file + '.raw'):
+        os.remove(output_file +'.raw')
+       
+    os.chdir(Folder)
+    
+    #changing plm to raw
+    output = output_file +'.plm'
+    os.rename(output, output_file + ".raw")
+    new_image = output_file + ".raw"
+    
+    
+    #removing the header lines from the raw file
+    with open(new_image, 'r+b') as f:
+        lines = f.readlines()
+    print len(lines)
+    
+    lines[:] = lines[4:]
+    with open(new_image, 'w+b') as f:
+        f.write(''.join(lines))
+    print len(lines)
+    f.close()
+    
+    
+    #memory mapping
+    segments_regiongrowing = np.memmap( new_image, dtype=np.int32, shape=(rows, cols))
+    print("output_regiongrowing's number of segments: %d" % len(np.unique(segments_regiongrowing)))
+    
+    return segments_regiongrowing
+
+
+
