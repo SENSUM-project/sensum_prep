@@ -971,7 +971,7 @@ def reproject_shapefile(path,name_input,name_output,epsg_output,option):
     prjfile.write(outprj.ExportToWkt())
     prjfile.close()
   
-def SLIC( Input_Image,ratio, n_segments, sigma):
+def SLIC( Input_Image,rat, n_seg, sig):
     
     '''
     ###################################################################################################################
@@ -982,13 +982,13 @@ def SLIC( Input_Image,ratio, n_segments, sigma):
     parameters:     Input_Image : ndarray
                     Input image, which can be 2D or 3D, and grayscale or multi-channel (see multichannel parameter).
     
-                    n_segments : int
+                    n_seg : number of segments, int
                     The (approximate) number of labels in the segmented output image.
     
-                    ratio:  float
+                    rat:  ratio, float
                     Balances color-space proximity and image-space proximity. Higher values give more weight to color-space and yields more square regions
     
-                    sigma : float
+                    sig : sigma, float
                     Width of Gaussian smoothing kernel for preprocessing. Zero means no smoothing.
     
     return:         Output_mask : ndarray
@@ -998,15 +998,15 @@ def SLIC( Input_Image,ratio, n_segments, sigma):
     ###################################################################################################################    
     '''
     
-    if ratio == 0:
-        ratio = 0.5
-    if n_segments == 0:
-        n_segments = 3
-    if sigma ==0:
-        sigma = 1
+    if rat == 0:
+        rat = 0.5
+    if n_seg == 0:
+        n_seg = 3
+    if sig ==0:
+        sig = 1
 
     img = cv2.imread(Input_Image)
-    segments_slic = slic(img, ratio=0.5, n_segments=3, sigma=1)
+    segments_slic = slic(img, ratio=rat, n_segments=n_seg, sigma=sig)
     print("Slic number of segments: %d" % len(np.unique(segments_slic)))
     return segments_slic
 
