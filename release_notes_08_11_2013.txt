@@ -1,0 +1,14 @@
+Implemented features:
+
+- multiband segmentation 
+	SLIC (3 bands)
+	FELZENSZWALB (3 bands)
+	QUICKSHIFT (3 bands)
+	BAATZ (4 bands)
+	REGION GROWING (4 bands)
+
+Changes:
+
+- Read_Image function
+- WriteOutputImage (now you have to provide the entire path for the projection
+  reference, not forced to be in the same folder as the output)
