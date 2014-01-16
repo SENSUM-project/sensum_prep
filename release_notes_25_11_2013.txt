@@ -1,0 +1,25 @@
+New and improved in library_25_11_2013:
+
+- OTB pan-sharpening
+- OTB multiband segmentations (watershed, meanshift, edison-meanshift, mprofiles)
+- Spectral features
+- Multispectral features
+- Textural features
+- Moving window feature computation (draft)
+- Shapefile to Raster conversion
+- Raster to Shapefile conversion
+- Read Image parameters
+
+
+New test_features_computation_nomulti:
+
+- No multiprocess calls (windows problem)
+- Improved functions
+- Less time consuming
+- Output as a shapefile
+
+
+New stack_satellite_20_11_2013:
+
+- Now works with mixed Landsat5 and Landsat7 folders
+- Based on folder names with acquisition date, for example 1996-10-24, 2000-05-20, ...
